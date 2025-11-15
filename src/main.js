@@ -578,6 +578,10 @@ class InteriorDesignApp extends xb.Script {
     // 启用画笔
     this.blackPainter = new Painter();
     this.add(this.blackPainter);
+    if (this.previewPanel) {
+      // Prevent dragging the panel while drawing.
+      this.previewPanel.draggable = false;
+    }
     console.log("✅ 画笔已启用！用手柄的 trigger 按钮画画");
   }
 
