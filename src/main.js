@@ -34,15 +34,16 @@ class InteriorDesignApp extends xb.Script {
     this.isProcessing = false; // 是否有任务正在执行
     this.currentTask = null; // 当前任务名称
 
-    this.setupGeminiLive();
+    // this.setupGeminiLive();
     // this.testImageToBase64();
     // this.loadTestMesh();
     // this.loadGeneratedModel(MESHY_TEST_MODEL);
 
     this.boundingBoxCreator.addEventListener("boundingBoxCreated", () => {
-      this.sendMessageToGeminiLive(
-        "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
-      );
+      // this.sendMessageToGeminiLive(
+      //   "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
+      // );
+      this.loadGeneratedModel(MESHY_TEST_MODEL);
     });
 
     // For testing only. Calls generateImage after 10 seconds.
