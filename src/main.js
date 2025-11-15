@@ -41,10 +41,9 @@ class InteriorDesignApp extends xb.Script {
     // this.loadGeneratedModel(MESHY_TEST_MODEL);
 
     this.boundingBoxCreator.addEventListener("boundingBoxCreated", () => {
-      // this.sendMessageToGeminiLive(
-      //   "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
-      // );
-      this.loadGeneratedModel(MESHY_TEST_MODEL);
+      this.sendMessageToGeminiLive(
+        "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
+      );
     });
 
     // For testing only. Calls generateImage after 10 seconds.
