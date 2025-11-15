@@ -121,6 +121,10 @@ export class BoundingBoxCreator extends xb.Script {
         this.currentBoxMesh.userData.isExtruded = true;
         this.currentBoxMesh.material.color.setHex(this.FINAL_COLOR);
         this.currentBoxMesh = null;
+        this.dispatchEvent({
+          type: "boundingBoxCreated",
+          box: this.currentBoxMesh,
+        });
       }
     }
   }

@@ -22,15 +22,21 @@ class InteriorDesignApp extends xb.Script {
     this.add(new THREE.HemisphereLight(0xffffff, 0x666666, /*intensity=*/ 3));
     this.boundingBoxCreator = new BoundingBoxCreator();
     this.add(this.boundingBoxCreator);
-  
+
     // 👇 添加任务状态管理
-    this.isProcessing = false;  // 是否有任务正在执行
-    this.currentTask = null;     // 当前任务名称
+    this.isProcessing = false; // 是否有任务正在执行
+    this.currentTask = null; // 当前任务名称
 
     this.setupGeminiLive();
     // this.testImageToBase64();
     // this.loadTestMesh();
     // this.loadGeneratedModel(MESHY_TEST_MODEL);
+
+    this.boundingBoxCreator.addEventListener("boundingBoxCreated", () => {
+      this.sendMessageToGeminiLive(
+        "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
+      );
+    });
 
     // For testing only. Calls generateImage after 10 seconds.
     // setTimeout(() => {
@@ -90,9 +96,7 @@ class InteriorDesignApp extends xb.Script {
     const regenerateWithSketchTool = new RegenerateWithSketchTool(
       this.captureAndRegenerateImage.bind(this)
     );
-    const generateMeshTool = new GenerateMeshTool(
-      this.generateMesh.bind(this)
-    );
+    const generateMeshTool = new GenerateMeshTool(this.generateMesh.bind(this));
     geminiManager.tools.push(generateImageTool);
     geminiManager.tools.push(enableDrawingTool);
     geminiManager.tools.push(regenerateWithSketchTool);
@@ -107,6 +111,15 @@ class InteriorDesignApp extends xb.Script {
       await geminiManager.startGeminiLive({ liveParams, model });
       console.log("Started Gemini Live");
     }, 1000);
+  }
+
+  sendMessageToGeminiLive(message) {
+    const gemini = xb.core.ai.model;
+    if (gemini) {
+      gemini.sendRealtimeInput({ text: message });
+      return true;
+    }
+    return false;
   }
 
   async testImageToBase64() {
@@ -265,21 +278,59 @@ class InteriorDesignApp extends xb.Script {
   async loadGeneratedModel(modelUrl) {
     console.log("\n🎨 开始加载生成的 3D 模型...");
 
+    // Get the user-drawn bounding box
+    const boundingBox = this.boundingBoxCreator.children[0];
+
     const modelviewer = new xb.ModelViewer({});
     xb.initScript(modelviewer);
+
+    // Load the model
     await modelviewer.loadGLTFModel({
       onSceneLoaded: (scene) => {
-        modelviewer.add(new SpawnInEffect(scene));
+        // modelviewer.add(new SpawnInEffect(scene));
       },
       data: {
-        scale: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 }, // Load at 1x scale first to calculate bounds
         model: CORSPROXY_PREFIX + modelUrl,
       },
       renderer: xb.core.renderer,
       addOcclusionToShader: true,
     });
+
     this.add(modelviewer);
-    modelviewer.position.set(0, 1.0, -1.5);
+
+    // 👇 ALIGNMENT LOGIC START
+    if (boundingBox) {
+      // 1. Match Position and Rotation
+      // BoundingBoxCreator uses a pivot at the bottom-center of the box,
+      // and ModelViewer (by default) aligns the model's bottom-center to (0,0,0).
+      // Therefore, we can simply copy the transforms.
+      modelviewer.position.copy(boundingBox.position);
+      modelviewer.quaternion.copy(boundingBox.quaternion);
+
+      // 2. Match Scale
+      // Get the actual size of the loaded GLTF model (unscaled)
+      const modelSize = new THREE.Vector3();
+      // ModelViewer automatically calculates 'bbox' during loadGLTFModel
+      modelviewer.bbox.getSize(modelSize);
+
+      // Get the target size from the user's bounding box
+      // (Since BoundingBoxCreator uses a 1x1x1 geometry, .scale represents actual dimensions)
+      const targetSize = boundingBox.scale;
+
+      // Calculate ratio to stretch model to fit the box exactly
+      // Check for zeros to prevent Infinity
+      if (modelSize.x > 0 && modelSize.y > 0 && modelSize.z > 0) {
+        modelviewer.scale.set(
+          targetSize.x / modelSize.x,
+          targetSize.y / modelSize.y,
+          targetSize.z / modelSize.z
+        );
+      }
+
+      this.boundingBoxCreator.clearMeshes();
+    }
+    // 👆 ALIGNMENT LOGIC END
 
     console.log("🎉 模型已添加到场景中！");
   }
@@ -301,34 +352,32 @@ class InteriorDesignApp extends xb.Script {
     modelviewer.position.set(0, 1.0, -1.5);
   }
 
-
-
   /**
-     * 拍截图并重新生成图片（通过 Tool 调用）
-     */
+   * 拍截图并重新生成图片（通过 Tool 调用）
+   */
   async captureAndRegenerateImage() {
     this.startTask("重新生成图片");
     try {
       console.log("\n📸 开始拍截图...");
-      
+
       // 检查是否有当前图片
       if (!this.imageData) {
         throw new Error("没有当前图片。请先生成一张家具图片。");
       }
-      
+
       // 检查是否启用了画笔
       if (!this.blackPainter) {
         console.warn("⚠️ 画笔未启用，将直接拍摄当前场景");
       }
-      
+
       // 使用 xrblocks 的截图功能
-      const screenshotBase64 = await xb.core.screenshotSynthesizer.getScreenshot();
+      const screenshotBase64 =
+        await xb.core.screenshotSynthesizer.getScreenshot();
       console.log("✅ 截图完成！");
       console.log("截图数据长度:", screenshotBase64.length);
-      
+
       // 发送到 Gemini 重新生成图片
       await this.regenerateImageWithSketch(screenshotBase64);
-      
     } catch (error) {
       console.error("❌ 拍截图出错:", error);
       throw error; // 向 Tool 抛出错误，让 Gemini 知道
@@ -337,15 +386,12 @@ class InteriorDesignApp extends xb.Script {
     }
   }
 
-
-
-
   /**
-     * 把截图发送给 Gemini，生成新图片
-     */
+   * 把截图发送给 Gemini，生成新图片
+   */
   async regenerateImageWithSketch(screenshotBase64) {
     console.log("\n🤖 发送截图给 Gemini...");
-    
+
     if (!xb.core.ai.isAvailable()) {
       console.error("❌ AI 不可用");
       return;
@@ -353,10 +399,10 @@ class InteriorDesignApp extends xb.Script {
 
     try {
       const ai = xb.core.ai.model.ai;
-      
+
       // 准备图片数据（去掉 data:image/png;base64, 前缀）
-      const base64Data = screenshotBase64.split(',')[1];
-      
+      const base64Data = screenshotBase64.split(",")[1];
+
       const prompt = `
         Look at this image containing a furniture item with hand-drawn sketches overlaid on it. 
         Based on the sketch modifications, generate a NEW image of ONLY the updated furniture piece.
@@ -370,7 +416,7 @@ class InteriorDesignApp extends xb.Script {
         - Maintain the approximate size and proportions of the original furniture
               `.trim();
       console.log("📝 Prompt:", prompt);
-      
+
       // 发送图片和文字给 Gemini
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
@@ -381,56 +427,54 @@ class InteriorDesignApp extends xb.Script {
               {
                 inlineData: {
                   mimeType: "image/png",
-                  data: base64Data
-                }
-              }
-            ]
-          }
+                  data: base64Data,
+                },
+              },
+            ],
+          },
         ],
       });
       console.log("📦 Gemini 响应:", response);
-      
+
       // 提取生成的新图片
       if (response.candidates && response.candidates.length > 0) {
         const firstCandidate = response.candidates[0];
         for (const part of firstCandidate?.content?.parts || []) {
           if (part.inlineData) {
-            const newImageData = "data:image/png;base64," + part.inlineData.data;
+            const newImageData =
+              "data:image/png;base64," + part.inlineData.data;
             console.log("✅ Gemini 生成了新图片！");
-            
+
             // 👇 清除画笔的内容
             this.clearPainterStrokes();
 
             // 更新显示
             this.updateImagePreview(newImageData);
-            
+
             // 更新当前图片数据，以便后续生成 3D 模型
             this.imageData = newImageData;
-            
+
             return;
           }
         }
       }
-      
-      console.error("❌ Gemini 没有返回图片");
 
+      console.error("❌ Gemini 没有返回图片");
     } catch (error) {
       console.error("❌ 发送给 Gemini 出错:", error);
     }
   }
 
-
-
   /**
-     * 清除画笔的所有线条
-     */
+   * 清除画笔的所有线条
+   */
   clearPainterStrokes() {
     if (this.blackPainter) {
       console.log("🧹 清除画笔线条...");
-      
+
       // 移除画笔对象
       this.remove(this.blackPainter);
-      
+
       // 如果需要清理资源
       if (this.blackPainter.painters) {
         for (const painter of this.blackPainter.painters) {
@@ -445,29 +489,27 @@ class InteriorDesignApp extends xb.Script {
           }
         }
       }
-      
+
       // 重置引用
       this.blackPainter = null;
-      
+
       console.log("✅ 画笔线条已清除！");
     }
   }
-
-
 
   /**
    * 更新图片预览
    */
   updateImagePreview(newImageData) {
     console.log("🖼️ 更新图片预览...");
-    
+
     // 移除旧的预览
     if (this.previewPanel) {
       this.remove(this.previewPanel);
       this.previewPanel.dispose();
       this.previewPanel = null;
     }
-    
+
     // 创建新的预览
     const panel = new xb.SpatialPanel();
     panel.add(
@@ -477,29 +519,26 @@ class InteriorDesignApp extends xb.Script {
     );
     this.add(panel);
     this.previewPanel = panel;
-    
+
     console.log("✅ 图片预览已更新！");
   }
 
-
   /**
-     * 启用绘画工具（通过 Gemini Tool 调用）
-     */
+   * 启用绘画工具（通过 Gemini Tool 调用）
+   */
   enableDrawing() {
     console.log("🎨 启用绘画工具...");
-    
+
     if (this.blackPainter) {
       console.log("⚠️ 画笔已经启用");
       return;
     }
-    
+
     // 启用画笔
     this.blackPainter = new Painter();
     this.add(this.blackPainter);
     console.log("✅ 画笔已启用！用手柄的 trigger 按钮画画");
   }
-
-
 
   async generateImage(furniture = "bookshelf") {
     // 👇 开始任务前检查
@@ -567,16 +606,16 @@ class InteriorDesignApp extends xb.Script {
   async generateMesh() {
     // 👇 开始任务前检查（这个任务最耗时）
     this.startTask("生成 3D 模型");
-    
+
     try {
       console.log("🔨 开始生成 3D 模型...");
       console.log("⏰ 这个过程可能需要 3-5 分钟，请耐心等待...");
-      
+
       // 检查是否有图片数据
       if (!this.imageData) {
         throw new Error("没有图片数据。请先生成一张家具图片。");
       }
-      
+
       // 创建 Meshy 任务
       console.log("📤 发送图片到 Meshy AI...");
       const taskId = await this.createMeshyTask(this.imageData);
@@ -589,9 +628,8 @@ class InteriorDesignApp extends xb.Script {
       // 加载生成的 3D 模型
       console.log("🎨 加载 3D 模型到场景中...");
       await this.loadGeneratedModel(modelUrl);
-      
+
       console.log("🎉 3D 模型生成完成！");
-      
     } catch (error) {
       console.error("❌ 生成 3D 模型失败:", error);
       throw error;
