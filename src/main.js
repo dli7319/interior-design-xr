@@ -2,14 +2,12 @@ import "xrblocks/addons/simulator/SimulatorAddons.js";
 
 import * as THREE from "three";
 import * as xb from "xrblocks";
-import { Painter } from "./Painter.js";
 import { SpawnInEffect } from "./SpawnInEffect.js";
 import { BoundingBoxCreator } from "./BoundingBoxCreator.js";
 const MESHY_API_KEY = "msy_KfucWecXQglhW2iIWbs6pUCRST1IqOGJPPBg";
 const GEMINI_BOOKSHELF_IMAGE = "./gemini_bookshelf.png";
 const CORSPROXY_PREFIX = "https://corsproxy.io/?url=";
 const MESHY_TEST_MODEL =
-  CORSPROXY_PREFIX +
   "https://assets.meshy.ai/b374fcb7-0ea2-4bb2-a1f3-8f7c26a2c47e/tasks/019a864d-b626-7e0c-9ef4-baea287d8a11/output/model.glb?Expires=1763449268&Signature=DF2Cz4IwfyWxRCKNruRPXTJfmYoikdztEg3MNiC0~gWtUzKoMuJmnd1TJOs3O5r3qxZ1WqhoZYi14XDN8sBHZVynxn-P-N-G6u1eDmKYMFchO-NGPjAkvf6SXYbnrqdXcEqnjBfbBfpWzE4dK9i2X6ZyLZxk-5mjCiXTW5vvb6WtcojZNrLd4~pi0ZP2ODzwrJnpg-06VLKUVfsJSTxgaQJWJ0rIlyUeJtTIe~7G0Ce1N13Dh1rtEOg2w2f90vxpqGXCsjuFcxToMKIybgJ7HXrMEZB43yBBhZgPAk2rI9oexx7qqhtTQ~gqseAZvubZJsQCQsfo7MpdSaEcVf0WTw__&Key-Pair-Id=KL5I0C8H7HX83";
 
 class InteriorDesignApp extends xb.Script {
@@ -17,8 +15,14 @@ class InteriorDesignApp extends xb.Script {
     this.add(new THREE.HemisphereLight(0xffffff, 0x666666, /*intensity=*/ 3));
     this.boundingBoxCreator = new BoundingBoxCreator();
     this.add(this.boundingBoxCreator);
-    this.testImageToBase64();
-    //this.loadTestMesh();
+    // this.testImageToBase64();
+    // this.loadTestMesh();
+    // this.loadGeneratedModel(MESHY_TEST_MODEL);
+
+    // For testing only. Calls generateImage after 10 seconds.
+    // setTimeout(() => {
+    //   this.generateImage();
+    // }, 10000);
   }
 
   async testImageToBase64() {
@@ -178,9 +182,9 @@ class InteriorDesignApp extends xb.Script {
     console.log("\n🎨 开始加载生成的 3D 模型...");
 
     const modelviewer = new xb.ModelViewer({});
+    xb.initScript(modelviewer);
     await modelviewer.loadGLTFModel({
       onSceneLoaded: (scene) => {
-        console.log("✅ 生成的模型加载成功！", scene);
         modelviewer.add(new SpawnInEffect(scene));
       },
       data: {
@@ -188,6 +192,7 @@ class InteriorDesignApp extends xb.Script {
         model: CORSPROXY_PREFIX + modelUrl,
       },
       renderer: xb.core.renderer,
+      addOcclusionToShader: true,
     });
     this.add(modelviewer);
     modelviewer.position.set(0, 1.0, -1.5);
@@ -213,7 +218,7 @@ class InteriorDesignApp extends xb.Script {
   }
 
   async generateImage(furniture = "bookshelf") {
-    console.log("taking screenshot");
+    console.log("Generate Image");
     if (!xb.core.ai.isAvailable()) {
       console.error("AI is not available");
       return;
@@ -262,6 +267,18 @@ class InteriorDesignApp extends xb.Script {
       console.error("Gemini did not return an image");
     }
   }
+
+  async generateMesh() {
+    console.log("Generate mesh");
+    const taskId = await this.createMeshyTask(this.imageData);
+    console.log("taskId", taskId);
+
+    // 轮询任务状态并获取模型 URL
+    const modelUrl = await this.pollTaskStatus(taskId);
+
+    // 加载生成的 3D 模型
+    await this.loadGeneratedModel(modelUrl);
+  }
 }
 
 /**
@@ -271,6 +288,8 @@ function start() {
   const options = new xb.Options();
   options.enableDepth();
   options.enableAI();
+  options.depth.depthTexture.enabled = true;
+  options.depth.occlusion.enabled = true;
   options.simulator.instructions.enabled = false;
   xb.add(new InteriorDesignApp());
   xb.init(options);

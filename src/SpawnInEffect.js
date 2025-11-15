@@ -5,8 +5,13 @@ function setupPrintingEffect(customUniforms, material) {
   // Important: Render both sides so the object doesn't look invisible from the inside
   material.side = THREE.DoubleSide;
 
+  const previousOnBeforeCompile = material.onBeforeCompile;
+
   // Hook into the compilation process
   material.onBeforeCompile = (shader) => {
+    if (previousOnBeforeCompile) {
+      previousOnBeforeCompile(shader);
+    }
     // Link our custom uniforms to the shader's uniforms
     shader.uniforms.uPrintHeight = customUniforms.uPrintHeight;
     shader.uniforms.uPrintColor = customUniforms.uPrintColor;
@@ -115,7 +120,7 @@ export class SpawnInEffect extends xb.Script {
       progress
     );
     if (progress > 2.0) {
-        this.removeFromParent();
+      this.removeFromParent();
     }
   }
 }
