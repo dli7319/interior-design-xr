@@ -8,6 +8,9 @@ import { SpawnInEffect } from "./SpawnInEffect.js";
 import { BoundingBoxCreator } from "./BoundingBoxCreator.js";
 import { Painter } from "./Painter.js";
 import { GenerateImageTool } from "./gemini_tools/GenerateImageTool.js";
+import { EnableDrawingTool } from "./gemini_tools/EnableDrawingTool.js";
+import { RegenerateWithSketchTool } from "./gemini_tools/RegenerateWithSketchTool.js";
+import { GenerateMeshTool } from "./gemini_tools/GenerateMeshTool.js";
 const MESHY_API_KEY = "msy_KfucWecXQglhW2iIWbs6pUCRST1IqOGJPPBg";
 const GEMINI_BOOKSHELF_IMAGE = "./gemini_bookshelf.png";
 const CORSPROXY_PREFIX = "https://corsproxy.io/?url=";
@@ -25,9 +28,9 @@ class InteriorDesignApp extends xb.Script {
     // this.loadGeneratedModel(MESHY_TEST_MODEL);
 
     // For testing only. Calls generateImage after 10 seconds.
-    setTimeout(() => {
-      this.generateImage();
-    }, 10000);
+    // setTimeout(() => {
+    //   this.generateImage();
+    // }, 10000);
   }
 
   setupGeminiLive() {
@@ -46,9 +49,19 @@ class InteriorDesignApp extends xb.Script {
     const generateImageTool = new GenerateImageTool(
       this.generateImage.bind(this)
     );
-
+    const enableDrawingTool = new EnableDrawingTool(
+      this.enableDrawing.bind(this)
+    );
+    const regenerateWithSketchTool = new RegenerateWithSketchTool(
+      this.captureAndRegenerateImage.bind(this)
+    );
+    const generateMeshTool = new GenerateMeshTool(
+      this.generateMesh.bind(this)
+    );
     geminiManager.tools.push(generateImageTool);
-
+    geminiManager.tools.push(enableDrawingTool);
+    geminiManager.tools.push(regenerateWithSketchTool);
+    geminiManager.tools.push(generateMeshTool);
     const liveParams = {
       tools: [{ googleSearch: {} }],
     };
@@ -256,11 +269,21 @@ class InteriorDesignApp extends xb.Script {
 
 
   /**
-   * 拍截图并重新生成图片
-   */
+     * 拍截图并重新生成图片（通过 Tool 调用）
+     */
   async captureAndRegenerateImage() {
     try {
       console.log("\n📸 开始拍截图...");
+      
+      // 检查是否有当前图片
+      if (!this.imageData) {
+        throw new Error("没有当前图片。请先生成一张家具图片。");
+      }
+      
+      // 检查是否启用了画笔
+      if (!this.blackPainter) {
+        console.warn("⚠️ 画笔未启用，将直接拍摄当前场景");
+      }
       
       // 使用 xrblocks 的截图功能
       const screenshotBase64 = await xb.core.screenshotSynthesizer.getScreenshot();
@@ -272,6 +295,7 @@ class InteriorDesignApp extends xb.Script {
       
     } catch (error) {
       console.error("❌ 拍截图出错:", error);
+      throw error; // 向 Tool 抛出错误，让 Gemini 知道
     }
   }
 
@@ -296,16 +320,16 @@ class InteriorDesignApp extends xb.Script {
       const base64Data = screenshotBase64.split(',')[1];
       
       const prompt = `
-        Look at this image containing a furniture item with some hand-drawn sketches overlaid on it. 
+        Look at this image containing a furniture item with hand-drawn sketches overlaid on it. 
         Based on the sketch modifications, generate a NEW image of ONLY the updated furniture piece.
 
-        IMPORTANT:
-        - Generate ONLY the furniture (bookshelf) itself
-        - Do NOT include any drawing tools, lines, strokes, or UI elements
-        - Do NOT include any background, hands, or controllers
+        CRITICAL REQUIREMENTS:
+        - Generate ONLY the furniture itself (no drawing tools, lines, strokes, or UI elements)
+        - Do NOT include any background, hands, controllers, or other objects
         - The furniture should incorporate the design changes suggested by the sketches
-        - Generate at a 3/4 viewing angle
-        - Output should be a clean product image with transparent or white background
+        - Generate at a 3/4 viewing angle for best visibility
+        - Output should be a clean product image with white or transparent background
+        - Maintain the approximate size and proportions of the original furniture
               `.trim();
       console.log("📝 Prompt:", prompt);
       
@@ -420,6 +444,24 @@ class InteriorDesignApp extends xb.Script {
   }
 
 
+  /**
+     * 启用绘画工具（通过 Gemini Tool 调用）
+     */
+  enableDrawing() {
+    console.log("🎨 启用绘画工具...");
+    
+    if (this.blackPainter) {
+      console.log("⚠️ 画笔已经启用");
+      return;
+    }
+    
+    // 启用画笔
+    this.blackPainter = new Painter();
+    this.add(this.blackPainter);
+    console.log("✅ 画笔已启用！用手柄的 trigger 按钮画画");
+  }
+
+
 
   async generateImage(furniture = "bookshelf") {
     console.log("Generate Image");
@@ -467,18 +509,8 @@ class InteriorDesignApp extends xb.Script {
       this.add(panel);
       this.previewPanel = panel;
 
-      // 👇 在这里添加黑色画笔
-      if (!this.blackPainter) {
-        this.blackPainter = new Painter();
-        this.add(this.blackPainter);
-        console.log("✏️ 黑色画笔已启用！用手柄的 trigger 按钮画画");
-      }
-
-      // 👇 新增：20秒后自动拍截图并重新生成
-      console.log("⏰ 20秒后将自动拍截图并发送给 Gemini...");
-      setTimeout(() => {
-        this.captureAndRegenerateImage();
-      }, 20000);
+      console.log("✅ 图片生成成功！");
+      console.log("💡 提示：你可以让 Gemini 启用画笔来修改设计");
     } else {
       console.error("Gemini did not return an image");
     }
