@@ -1,41 +1,77 @@
-# Interior Design XR
+<div align="center">
 
-Interior Design XR (IDXR) is a WebXR application which lets you generate custom furniture, placed and sized directly in your home!
+# 🛋️ Interior Design XR 🪄
 
-## User Journey
+**The future of interior design is here. Built for [Galaxy XR](https://www.samsung.com/us/xr/galaxy-xr/galaxy-xr/) on [Android XR](https://www.android.com/xr/) and powered by [XR Blocks](http://xrblocks.github.io/).**
 
-1. A user puts on a WebXR compatible headset, like the [Samsung Galaxy XR](https://www.samsung.com/us/xr/galaxy-xr/galaxy-xr/) powered by [Android XR](https://www.android.com/xr/), and enters the application by simply navigating to the IDXR website within the headset.
-2. While inside IDXR, the user has access to the passthrough view, allowing them to see their environment and walk towards the location where they would like to place a new piece of furniture.
-3. The user can draw a 2D bounding box by pointing their cursor on the real-world surface, such as the floor or the wall, and dragging along the surface. Then they can extrude the bounding box into 3D by hovering their cursor over the 2D bounding box.
-4. With a 3D bounding box drawn, the user asks Gemini Live to generate their desired furniture. For example, the user may say "Generate an bookshelf" or "Generate a coffee table". After a few seconds, an image of the furniture with the size and shape of the bounding box will appear.
-5. The user can optionally modify the image by asking Gemini Live to trigger a painting mode. After editing, they ask Gemini to regenerate the image with their edits incorporated.
-6. Once the user is satisfied with the generated furniture image, they request Gemini to generate a 3D version of the furniture.
-7. In approximately one minute, the 3D bounding box and 2D image disappear and are replaced by a 3D model of the furniture.
+![Made with Gemini](https://img.shields.io/badge/Made%20with-Gemini-blue?style=for-the-badge&logo=google-gemini)
+![License](https://img.shields.io/github/license/dli7319/interior-design-xr?style=for-the-badge)
+![Language](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 
-## XR + AI Features
+</div>
 
-IDXR uses [XR Blocks](http://xrblocks.github.io/) to leverage the AR passthrough, hand/controller tracking, and depth sensing capabilities of WebXR.
+Interior Design XR (IDXR) is a revolutionary WebXR application that redefines how we design our living spaces. By leveraging the power of **Galaxy XR** and **Android XR**, IDXR provides a seamless and immersive mixed reality experience. With the help of **XR Blocks**, we bring generative AI to your home, allowing you to create and visualize custom furniture in real-time.
 
-1. [AR passthrough](https://www.w3.org/TR/webxr/#dom-xrsessionmode-immersive-ar) allows the user to see their real environment with virtual contents overlaid.
-2. [Hand and controller tracking](https://www.w3.org/TR/webxr/) enables the user to interact with the application using with hand/controller poses and pinch gestures or controller buttons for selection.
-3. [Depth sensing](https://www.w3.org/TR/webxr-depth-sensing-1/) enables environment-aware capabilities such as allowing the user to draw bounding boxes in the 3D environment and allowing furniture to appear occluded when moved behind real-world objects.
+## 🏆 Built for the Future of XR
 
-IDXR also applies cloud AI capabilities from Google Gemini Live, Google Nano Banana, and Meshy.
+This project is designed to showcase the immense potential of the next generation of XR devices.
 
-1. [Gemini Live](https://ai.google.dev/gemini-api/docs/live) enables a natural conversational interface to interact with the application. Specifically, Gemini handles launching different aspects of the application using [function calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting), such as triggering the image generation, triggering mesh generation, and enabling/disabling the 3D painting mode.
-2. [Nano Banana](https://ai.google.dev/gemini-api/docs/image-generation) powers the image generation capabilities to generate candidate images of furniture in the shape, size, and style requested by the user.
-3. [Meshy](https://docs.meshy.ai/en) is used to convert the funiture image from Nano Banana into an actual 3D textured mesh to be placed in the XR scene.
+- **🚀 Galaxy XR & Android XR:** We are proud to develop for the future of mobile XR. The combination of Galaxy XR's cutting-edge hardware and Android XR's robust platform provides the perfect foundation for immersive and performant mixed reality experiences.
+- **🧱 XR Blocks:** This project is built on XR Blocks, a powerful framework that unlocks the full potential of WebXR. XR Blocks enables us to rapidly prototype and build advanced XR features, such as passthrough vision, hand tracking, and depth sensing, creating a truly interactive and intuitive user experience.
 
-## Development Guide
+## ✨ Features
 
-Interior Design XR is written in JavaScript and has no build steps.
-We simply require any http server and a Gemini API key from [AI Studio](https://aistudio.google.com/).
-We recommend using [http-server](https://www.npmjs.com/package/http-server) for development.
+- **Seamless Mixed Reality:** See your room and virtual furniture together in stunning clarity, thanks to the advanced passthrough capabilities of modern XR devices.
+- **Intuitive Gesture Control:** Reach out and design with your hands. Draw bounding boxes for furniture directly on your floors and walls.
+- **3D Scene Understanding** Drag virtual objects and watch as they get occluded by real-world objects.
+- **Voice-Powered AI:** Simply describe the furniture you imagine. "A round wooden coffee table," or "a futuristic bookshelf," and watch our AI bring it to life.
+- **Iterate with a Sketch:** Modify the AI's creation by sketching new ideas directly onto the generated image.
+- **From 2D to 3D in Seconds:** Love the design? Convert the 2D image into a full 3D model and place it in your room.
 
-Most development can be done on a desktop browser in the [XR Blocks Simulator](https://xrblocks.github.io/docs/manual/Simulator/).
+## 🚀 Getting Started
 
-Once an http server is set up, add your Gemini API key to the following URL and paste it in the browser:
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/dli7319/interior-design-xr.git
+    cd interior-design-xr
+    ```
+2.  **Get a Gemini API Key:**
+    You'll need a Gemini API key from [Google AI Studio](https://aistudio.google.com/).
+3.  **Start a web server:**
+    This project is pure JavaScript and requires no build step. You can use any simple HTTP server. We recommend `http-server`.
+    ```bash
+    npx http-server
+    ```
+4.  **Open in your browser:**
+    For the ultimate experience, open the URL on a **Galaxy XR** headset. For development, you can use a desktop browser with the [XR Blocks Simulator](https://xrblocks.github.io/docs/manual/Simulator/).
 
-```
-http://localhost:8080/?key=API_KEY_HERE
-```
+    Append your Gemini API key to the URL:
+
+    ```
+    http://localhost:8080/?key=YOUR_API_KEY_HERE
+    ```
+
+## 🛠️ Technology Stack
+
+- **XR Platform:** **Galaxy XR** on **Android XR**
+- **WebXR Framework:** [**XR Blocks**](https://xrblocks.github.io/) and [**Three.js**](https://threejs.org/)
+- **AI:**
+  - [**Google Gemini**](https://ai.google.dev/gemini-api/docs/live): For natural language understanding and function calling.
+  - [**Nano Banana**](https://ai.google.dev/gemini-api/docs/image-generation): For generating high-quality images of furniture.
+  - [**Meshy**](https://docs.meshy.ai/en): To convert the 2D images into 3D models.
+
+## 🛣️ Future Work
+
+- [ ] Deeper integration with **Android XR** features such as light estimation and 3D meshing.
+- [ ] Photorealistic rendering with advanced lighting and materials.
+- [ ] Saving and sharing of complete room designs.
+- [ ] Collaboration mode for designing with others in the same space.
+
+## 👥 Team
+
+- [Adam Ren](https://www.linkedin.com/in/jiahao-ren-b912b2b3/)
+- [David Li](https://www.linkedin.com/in/david-li-23b812149/)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
