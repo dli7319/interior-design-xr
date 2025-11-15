@@ -29,9 +29,32 @@
         }
       }
     </script>
+    <style>
+      #missing-gemini-key-warning {
+        background: black;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        justify-content: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    </style>
   </head>
-
   <body>
+    <div id="missing-gemini-key-warning">
+      <p>
+        Gemini Key Not Found. Please enter a Gemini Key from
+        <a href="https://aistudio.google.com" style="display: inline"
+          >AI Studio</a
+        >
+        into the URL:
+      </p>
+      <p id="missing-gemini-key-url"></p>
+    </div>
     <script type="module" src="src/main.js"></script>
   </body>
 </html>
