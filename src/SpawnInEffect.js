@@ -105,6 +105,7 @@ export class SpawnInEffect extends xb.Script {
   }
 
   update() {
+    console.log("Generating spawn in effect");
     // Animate the height from bottom to top
     const elapsedTime = Date.now() - this.startTime;
     // Oscillate or just loop
@@ -114,5 +115,8 @@ export class SpawnInEffect extends xb.Script {
       this.maxY,
       progress
     );
+    if (progress > 1.0) {
+        this.removeFromParent();
+    }
   }
 }

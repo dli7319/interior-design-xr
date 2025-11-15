@@ -4,6 +4,7 @@ import * as THREE from "three";
 import * as xb from "xrblocks";
 import { Painter } from "./Painter.js";
 import { SpawnInEffect } from "./SpawnInEffect.js";
+import { BoundingBoxCreator } from "./BoundingBoxCreator.js";
 
 const CORSPROXY_PREFIX = "https://corsproxy.io/?url=";
 const MESHY_TEST_MODEL =
@@ -13,8 +14,7 @@ const MESHY_TEST_MODEL =
 class InteriorDesignApp extends xb.Script {
   init() {
     this.add(new THREE.HemisphereLight(0xffffff, 0x666666, /*intensity=*/ 3));
-    const painter = new Painter();
-    this.add(painter);
+    this.add(new BoundingBoxCreator());
   }
 
   async loadTestMesh() {
@@ -40,6 +40,7 @@ class InteriorDesignApp extends xb.Script {
  */
 function start() {
   const options = new xb.Options();
+  options.enableDepth();
   options.simulator.instructions.enabled = false;
   xb.add(new InteriorDesignApp());
   xb.init(options);
