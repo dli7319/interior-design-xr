@@ -19,6 +19,14 @@ export class Painter extends xb.Script {
 
     // Adds pivotal points to indicate user's intents.
     this.user.enablePivots();
+    xb.core.input.controllers.forEach((element) => {
+      element.traverse((child) => {
+        if (child.name == "pivot") {
+          console.log("ignoring reticle raycast");
+          child.ignoreReticleRaycast = true;
+        }
+      });
+    });
   }
 
   /**

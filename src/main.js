@@ -11,6 +11,7 @@ import { GenerateImageTool } from "./gemini_tools/GenerateImageTool.js";
 import { EnableDrawingTool } from "./gemini_tools/EnableDrawingTool.js";
 import { RegenerateWithSketchTool } from "./gemini_tools/RegenerateWithSketchTool.js";
 import { GenerateMeshTool } from "./gemini_tools/GenerateMeshTool.js";
+import { DisableDrawingTool } from "./gemini_tools/DisableDrawingTool.js";
 const MESHY_API_KEY = "msy_KfucWecXQglhW2iIWbs6pUCRST1IqOGJPPBg";
 const GEMINI_BOOKSHELF_IMAGE = "./gemini_bookshelf.png";
 const CORSPROXY_PREFIX = "https://corsproxy.io/?url=";
@@ -40,9 +41,10 @@ class InteriorDesignApp extends xb.Script {
     // this.loadGeneratedModel(MESHY_TEST_MODEL);
 
     this.boundingBoxCreator.addEventListener("boundingBoxCreated", () => {
-      this.sendMessageToGeminiLive(
-        "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
-      );
+      // this.sendMessageToGeminiLive(
+      //   "[System Message] The user has created a new bounding box. Confirm with the user before generating an image."
+      // );
+      this.loadGeneratedModel(MESHY_TEST_MODEL);
     });
 
     // For testing only. Calls generateImage after 10 seconds.
@@ -106,12 +108,16 @@ class InteriorDesignApp extends xb.Script {
     const enableDrawingTool = new EnableDrawingTool(
       this.enableDrawing.bind(this)
     );
+    const disableDrawingTool = new DisableDrawingTool(
+      this.disableDrawingTool.bind(this)
+    );
     const regenerateWithSketchTool = new RegenerateWithSketchTool(
       this.captureAndRegenerateImage.bind(this)
     );
     const generateMeshTool = new GenerateMeshTool(this.generateMesh.bind(this));
     geminiManager.tools.push(generateImageTool);
     geminiManager.tools.push(enableDrawingTool);
+    geminiManager.tools.push(disableDrawingTool);
     geminiManager.tools.push(regenerateWithSketchTool);
     geminiManager.tools.push(generateMeshTool);
     const liveParams = {
@@ -419,6 +425,8 @@ class InteriorDesignApp extends xb.Script {
       return;
     }
 
+    this.disableDrawingTool();
+
     try {
       const ai = xb.core.ai.model.ai;
 
@@ -513,7 +521,7 @@ class InteriorDesignApp extends xb.Script {
       }
 
       // 重置引用
-      this.blackPainter = null;
+      this.disableDrawingTool();
 
       console.log("✅ 画笔线条已清除！");
     }
@@ -595,6 +603,8 @@ class InteriorDesignApp extends xb.Script {
         console.error("AI is not available");
         return;
       }
+      this.clearPainterStrokes();
+      this.disableDrawingTool();
 
       const boundingBox = this.boundingBoxCreator.children[0];
       if (!boundingBox) {
@@ -674,6 +684,22 @@ class InteriorDesignApp extends xb.Script {
       // 👇 无论成功失败都要解锁
       this.endTask();
     }
+  }
+
+  disableDrawingTool() {
+    if (this.blackPainter) {
+      this.remove(this.blackPainter);
+      this.blackPainter.dispose();
+    }
+    xb.core.input.controllers.forEach((element) => {
+      element.traverse((child) => {
+        if (child.name == "pivot") {
+          child.removeFromParent();
+          child.material.dispose();
+        }
+      });
+    });
+    this.blackPainter = null;
   }
 }
 
