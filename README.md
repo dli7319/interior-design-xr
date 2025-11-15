@@ -6,7 +6,11 @@ Interior Design XR (IDXR) is a WebXR application which lets you generate custom 
 
 1. A user puts on a WebXR compatible headset, like the [Samsung Galaxy XR](https://www.samsung.com/us/xr/galaxy-xr/galaxy-xr/) powered by [Android XR](https://www.android.com/xr/), and enters the application by simply navigating to the IDXR website within the headset.
 2. While inside IDXR, the user has access to the passthrough view, allowing them to see their environment and walk towards the location where they would like to place a new piece of furniture.
-3. The user can draw a 3D bounding box by pointing their cursor on the real-world surface, such as the floor or the wall, and dragging outwards. Then they can extrude the bounding box by hovering their cursor
+3. The user can draw a 2D bounding box by pointing their cursor on the real-world surface, such as the floor or the wall, and dragging outwards. Then they can extrude the bounding box into 3D by hovering their cursor over the 2D bounding box.
+4. With a 3D bounding box drawn, the user asks Gemini Live to generate their desired furniture. For example, the user may say "Generate an bookshelf" or "Generate a coffee table". After a few seconds, an image of the furniture with the size and shape of the bounding box will appear.
+5. The user can optionally modify the image by asking Gemini Live to trigger a painting mode. After editing, they ask Gemini to regenerate the image with their edits incorporated.
+6. Once the user is satisfied with the generated furniture image, they request Gemini to generate a 3D version of the furniture.
+7. In approximately one minute, the 3D bounding box and 2D image disappear and are replaced by a 3D model of the furniture.
 
 ## XR + AI Features
 
