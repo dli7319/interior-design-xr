@@ -234,7 +234,7 @@ class InteriorDesignApp extends xb.Script {
   /**
    * 轮询任务状态 - 基于官方文档和Python代码
    */
-  async pollTaskStatus(taskId) {
+  async pollTaskStatus(taskId, progressCallback) {
     console.log("\n⏳ 开始轮询任务状态...");
 
     const headers = {
@@ -269,6 +269,10 @@ class InteriorDesignApp extends xb.Script {
         console.log(
           `📊 Task 状态: ${task.status} | 进度: ${task.progress}% | 5秒后重试...`
         );
+
+        if (progressCallback) {
+          progressCallback(task.progress);
+        }
 
         // Python: time.sleep(5)
         await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -595,11 +599,19 @@ class InteriorDesignApp extends xb.Script {
           this.previewPanel = null;
         }
         const panel = new xb.SpatialPanel();
-        panel.add(
+        const grid = panel.addGrid();
+        grid.addRow({ weight: 0.8 }).add(
           new xb.ImageView({
             src: this.imageData,
           })
         );
+        const progressText = new xb.TextView({
+          text: "Mesh generation not started",
+        });
+        grid.addRow({ weight: 0.2 }).add(progressText);
+        panel.setMeshProgress = (progress) => {
+          progressText.text = `Mesh generation: ${progress}%`;
+        };
         this.add(panel);
         this.previewPanel = panel;
 
@@ -636,7 +648,11 @@ class InteriorDesignApp extends xb.Script {
 
       // 轮询任务状态
       console.log("⏳ 开始监控任务进度（这可能需要几分钟）...");
-      const modelUrl = await this.pollTaskStatus(taskId);
+      const modelUrl = await this.pollTaskStatus(taskId, (progress) => {
+        if (this.previewPanel) {
+          this.previewPanel.setMeshProgress(progress);
+        }
+      });
 
       // 加载生成的 3D 模型
       console.log("🎨 加载 3D 模型到场景中...");
