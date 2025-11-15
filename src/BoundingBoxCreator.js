@@ -8,6 +8,7 @@ const _q1 = new THREE.Quaternion();
 const _m1 = new THREE.Matrix4();
 
 const MIN_DIMENSION = 0.005;
+const INITIAL_HEIGHT = 0.1; // 10cm initial height
 const ROTATION_SENSITIVITY = 3.0; // Meters of height change per unit of sine-pitch
 
 /**
@@ -15,7 +16,7 @@ const ROTATION_SENSITIVITY = 3.0; // Meters of height change per unit of sine-pi
  * 1. Draw the base quad on a surface (Start Point -> Current Point defines W x L).
  * 2. Extrude the base vertically (Controller Rotation defines H).
  *
- * MODIFIED: Box is XZ plane aligned. Extrusion is driven by Controller Pitch.
+ * MODIFIED: Box is XZ plane aligned. Extrusion is driven by Controller Pitch. Initial height is 10cm.
  */
 export class BoundingBoxCreator extends xb.Script {
   constructor() {
@@ -167,7 +168,9 @@ export class BoundingBoxCreator extends xb.Script {
     this.currentBoxMesh = new THREE.Mesh(geometry, this.boxMaterial.clone());
     this.currentBoxMesh.position.copy(this.startPoint);
     this.currentBoxMesh.quaternion.copy(this.boxRotation);
-    this.currentBoxMesh.scale.set(MIN_DIMENSION, MIN_DIMENSION, MIN_DIMENSION);
+
+    // Initialize with specific height
+    this.currentBoxMesh.scale.set(MIN_DIMENSION, INITIAL_HEIGHT, MIN_DIMENSION);
 
     this.add(this.currentBoxMesh);
   }
@@ -183,9 +186,10 @@ export class BoundingBoxCreator extends xb.Script {
     const width = localPoint.x;
     const length = localPoint.z;
 
+    // Maintain INITIAL_HEIGHT during base drawing
     this.currentBoxMesh.scale.set(
       Math.max(MIN_DIMENSION, Math.abs(width)),
-      MIN_DIMENSION,
+      INITIAL_HEIGHT,
       Math.max(MIN_DIMENSION, Math.abs(length))
     );
 
