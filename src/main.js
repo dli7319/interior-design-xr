@@ -545,11 +545,19 @@ class InteriorDesignApp extends xb.Script {
 
     panel.position.copy(spawnPos);
     panel.quaternion.copy(camera.quaternion);
-    panel.add(
+    const grid = panel.addGrid();
+    grid.addRow({ weight: 0.8 }).add(
       new xb.ImageView({
         src: newImageData,
       })
     );
+    const progressText = new xb.TextView({
+      text: "Mesh generation not started",
+    });
+    grid.addRow({ weight: 0.2 }).add(progressText);
+    panel.setMeshProgress = (progress) => {
+      progressText.text = `Mesh generation: ${progress}%`;
+    };
     this.add(panel);
     this.previewPanel = panel;
 
@@ -609,38 +617,7 @@ class InteriorDesignApp extends xb.Script {
         }
       }
       if (this.imageData) {
-        if (this.previewPanel) {
-          this.remove(this.previewPanel);
-          this.previewPanel.dispose();
-          this.previewPanel = null;
-        }
-        const panel = new xb.SpatialPanel();
-        const camera = xb.core.camera;
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
-          camera.quaternion
-        );
-        const distance = 0.8; // 0.8 meters away
-        const spawnPos = camera.position
-          .clone()
-          .add(forward.multiplyScalar(distance));
-
-        panel.position.copy(spawnPos);
-        panel.quaternion.copy(camera.quaternion);
-        const grid = panel.addGrid();
-        grid.addRow({ weight: 0.8 }).add(
-          new xb.ImageView({
-            src: this.imageData,
-          })
-        );
-        const progressText = new xb.TextView({
-          text: "Mesh generation not started",
-        });
-        grid.addRow({ weight: 0.2 }).add(progressText);
-        panel.setMeshProgress = (progress) => {
-          progressText.text = `Mesh generation: ${progress}%`;
-        };
-        this.add(panel);
-        this.previewPanel = panel;
+        this.updateImagePreview(this.imageData);
 
         console.log("✅ 图片生成成功！");
         console.log("💡 提示：你可以让 Gemini 启用画笔来修改设计");
