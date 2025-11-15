@@ -2,8 +2,11 @@ import "xrblocks/addons/simulator/SimulatorAddons.js";
 
 import * as THREE from "three";
 import * as xb from "xrblocks";
+
+import { GeminiManager } from "./GeminiManager.js";
 import { SpawnInEffect } from "./SpawnInEffect.js";
 import { BoundingBoxCreator } from "./BoundingBoxCreator.js";
+import { GenerateImageTool } from "./gemini_tools/GenerateImageTool.js";
 const MESHY_API_KEY = "msy_KfucWecXQglhW2iIWbs6pUCRST1IqOGJPPBg";
 const GEMINI_BOOKSHELF_IMAGE = "./gemini_bookshelf.png";
 const CORSPROXY_PREFIX = "https://corsproxy.io/?url=";
@@ -15,6 +18,7 @@ class InteriorDesignApp extends xb.Script {
     this.add(new THREE.HemisphereLight(0xffffff, 0x666666, /*intensity=*/ 3));
     this.boundingBoxCreator = new BoundingBoxCreator();
     this.add(this.boundingBoxCreator);
+    this.setupGeminiLive();
     // this.testImageToBase64();
     // this.loadTestMesh();
     // this.loadGeneratedModel(MESHY_TEST_MODEL);
@@ -23,6 +27,37 @@ class InteriorDesignApp extends xb.Script {
     // setTimeout(() => {
     //   this.generateImage();
     // }, 10000);
+  }
+
+  setupGeminiLive() {
+    if (!xb.core.ai.isAvailable()) {
+      console.error("AI is not available");
+      return;
+    }
+    xb.core.ai.isAvailable = () => true;
+    const geminiManager = new GeminiManager();
+    xb.initScript(geminiManager);
+    this.add(geminiManager);
+    this.geminiManager = geminiManager;
+
+    const model = "gemini-live-2.5-flash-preview";
+
+    const generateImageTool = new GenerateImageTool(
+      this.generateImage.bind(this)
+    );
+
+    geminiManager.tools.push(generateImageTool);
+
+    const liveParams = {
+      tools: [{ googleSearch: {} }],
+    };
+
+    // Start Gemini Live in 1 second.
+    setTimeout(async () => {
+      console.log("Starting Gemini Live");
+      await geminiManager.startGeminiLive({ liveParams, model });
+      console.log("Started Gemini Live");
+    }, 1000);
   }
 
   async testImageToBase64() {
@@ -226,16 +261,15 @@ class InteriorDesignApp extends xb.Script {
 
     const boundingBox = this.boundingBoxCreator.children[0];
     if (!boundingBox) {
-      console.warn("No current bounding box");
-      return;
+      throw new Error("No current bounding box");
     }
     const width = boundingBox.scale.x.toFixed(2);
     const height = boundingBox.scale.y.toFixed(2);
     const depth = boundingBox.scale.z.toFixed(2);
 
     const ai = xb.core.ai.model.ai;
-    const prompt = `Examine the following image and generate an image of a ${furniture} that has a size of ${width}x${height}x${depth} (width, height, depth) meters. Generate the requested furnature without any background. Prefer to generate at a 3/4 angle.`;
-    console.log("Prompt:", prompt);
+    const prompt = `Examine the following image and generate an image of a ${furniture} that has a size of ${width}x${height}x${depth} (width, height, depth) meters. Generate the requested furniture without any background. Prefer to generate at a 3/4 angle.`;
+    console.log("Generate Image Prompt:", prompt);
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-image",
       contents: [prompt],
@@ -286,6 +320,7 @@ class InteriorDesignApp extends xb.Script {
  */
 function start() {
   const options = new xb.Options();
+  options.enableCamera();
   options.enableDepth();
   options.enableAI();
   options.depth.depthTexture.enabled = true;
