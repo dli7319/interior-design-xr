@@ -6,6 +6,7 @@ import { Painter } from "./Painter.js";
 
 class InteriorDesignApp extends xb.Script {
   init() {
+    this.add(new THREE.HemisphereLight(0xffffff, 0x666666, /*intensity=*/ 3));
     const painter = new Painter();
     this.add(painter);
   }
