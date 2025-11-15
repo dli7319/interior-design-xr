@@ -304,7 +304,7 @@ class InteriorDesignApp extends xb.Script {
     // Load the model
     await modelviewer.loadGLTFModel({
       onSceneLoaded: (scene) => {
-        // modelviewer.add(new SpawnInEffect(scene));
+        modelviewer.add(new SpawnInEffect(scene));
       },
       data: {
         scale: { x: 1, y: 1, z: 1 }, // Load at 1x scale first to calculate bounds
@@ -346,6 +346,11 @@ class InteriorDesignApp extends xb.Script {
       }
 
       this.boundingBoxCreator.clearMeshes();
+      if (this.previewPanel) {
+        this.remove(this.previewPanel);
+        this.previewPanel.dispose();
+        this.previewPanel = null;
+      }
     }
     // 👆 ALIGNMENT LOGIC END
 
