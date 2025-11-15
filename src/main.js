@@ -80,9 +80,9 @@ class InteriorDesignApp extends xb.Script {
       
       const payload = {
         image_url: base64Image,  // base64 data URI
-        enable_pbr: false,
-        should_remesh: false,
-        should_texture: false
+        enable_pbr: true,
+        should_remesh: true,
+        should_texture: true
       };
       
       console.log("📤 发送请求...");
