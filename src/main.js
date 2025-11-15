@@ -529,6 +529,17 @@ class InteriorDesignApp extends xb.Script {
 
     // 创建新的预览
     const panel = new xb.SpatialPanel();
+    const camera = xb.core.camera;
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+      camera.quaternion
+    );
+    const distance = 0.8; // 0.8 meters away
+    const spawnPos = camera.position
+      .clone()
+      .add(forward.multiplyScalar(distance));
+
+    panel.position.copy(spawnPos);
+    panel.quaternion.copy(camera.quaternion);
     panel.add(
       new xb.ImageView({
         src: newImageData,
@@ -599,6 +610,17 @@ class InteriorDesignApp extends xb.Script {
           this.previewPanel = null;
         }
         const panel = new xb.SpatialPanel();
+        const camera = xb.core.camera;
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+          camera.quaternion
+        );
+        const distance = 0.8; // 0.8 meters away
+        const spawnPos = camera.position
+          .clone()
+          .add(forward.multiplyScalar(distance));
+
+        panel.position.copy(spawnPos);
+        panel.quaternion.copy(camera.quaternion);
         const grid = panel.addGrid();
         grid.addRow({ weight: 0.8 }).add(
           new xb.ImageView({
