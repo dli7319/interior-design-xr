@@ -22,6 +22,11 @@ class InteriorDesignApp extends xb.Script {
     this.add(new THREE.HemisphereLight(0xffffff, 0x666666, /*intensity=*/ 3));
     this.boundingBoxCreator = new BoundingBoxCreator();
     this.add(this.boundingBoxCreator);
+  
+    // 👇 添加任务状态管理
+    this.isProcessing = false;  // 是否有任务正在执行
+    this.currentTask = null;     // 当前任务名称
+
     this.setupGeminiLive();
     // this.testImageToBase64();
     // this.loadTestMesh();
@@ -31,6 +36,36 @@ class InteriorDesignApp extends xb.Script {
     // setTimeout(() => {
     //   this.generateImage();
     // }, 10000);
+  }
+
+  /**
+   * 检查是否可以执行新任务
+   */
+  canStartTask() {
+    return !this.isProcessing;
+  }
+
+  /**
+   * 开始任务（加锁）
+   */
+  startTask(taskName) {
+    if (this.isProcessing) {
+      throw new Error(
+        `无法启动新任务 "${taskName}"。当前正在执行: ${this.currentTask}。请等待完成后再试。`
+      );
+    }
+    this.isProcessing = true;
+    this.currentTask = taskName;
+    console.log(`🔒 任务已锁定: ${taskName}`);
+  }
+
+  /**
+   * 结束任务（解锁）
+   */
+  endTask() {
+    console.log(`🔓 任务已完成: ${this.currentTask}`);
+    this.isProcessing = false;
+    this.currentTask = null;
   }
 
   setupGeminiLive() {
@@ -272,6 +307,7 @@ class InteriorDesignApp extends xb.Script {
      * 拍截图并重新生成图片（通过 Tool 调用）
      */
   async captureAndRegenerateImage() {
+    this.startTask("重新生成图片");
     try {
       console.log("\n📸 开始拍截图...");
       
@@ -296,6 +332,8 @@ class InteriorDesignApp extends xb.Script {
     } catch (error) {
       console.error("❌ 拍截图出错:", error);
       throw error; // 向 Tool 抛出错误，让 Gemini 知道
+    } finally {
+      this.endTask();
     }
   }
 
@@ -464,68 +502,103 @@ class InteriorDesignApp extends xb.Script {
 
 
   async generateImage(furniture = "bookshelf") {
-    console.log("Generate Image");
-    if (!xb.core.ai.isAvailable()) {
-      console.error("AI is not available");
-      return;
-    }
+    // 👇 开始任务前检查
+    this.startTask("生成图片");
 
-    const boundingBox = this.boundingBoxCreator.children[0];
-    if (!boundingBox) {
-      throw new Error("No current bounding box");
-    }
-    const width = boundingBox.scale.x.toFixed(2);
-    const height = boundingBox.scale.y.toFixed(2);
-    const depth = boundingBox.scale.z.toFixed(2);
+    try {
+      console.log("Generate Image");
+      if (!xb.core.ai.isAvailable()) {
+        console.error("AI is not available");
+        return;
+      }
 
-    const ai = xb.core.ai.model.ai;
-    const prompt = `Examine the following image and generate an image of a ${furniture} that has a size of ${width}x${height}x${depth} (width, height, depth) meters. Generate the requested furniture without any background. Prefer to generate at a 3/4 angle.`;
-    console.log("Generate Image Prompt:", prompt);
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
-      contents: [prompt],
-    });
-    console.log("response", response);
-    if (response.candidates && response.candidates.length > 0) {
-      const firstCandidate = response.candidates[0];
-      for (const part of firstCandidate?.content?.parts || []) {
-        if (part.inlineData) {
-          this.imageData = "data:image/png;base64," + part.inlineData.data;
+      const boundingBox = this.boundingBoxCreator.children[0];
+      if (!boundingBox) {
+        throw new Error("No current bounding box");
+      }
+      const width = boundingBox.scale.x.toFixed(2);
+      const height = boundingBox.scale.y.toFixed(2);
+      const depth = boundingBox.scale.z.toFixed(2);
+
+      const ai = xb.core.ai.model.ai;
+      const prompt = `Examine the following image and generate an image of a ${furniture} that has a size of ${width}x${height}x${depth} (width, height, depth) meters. Generate the requested furniture without any background. Prefer to generate at a 3/4 angle.`;
+      console.log("Generate Image Prompt:", prompt);
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: [prompt],
+      });
+      console.log("response", response);
+      if (response.candidates && response.candidates.length > 0) {
+        const firstCandidate = response.candidates[0];
+        for (const part of firstCandidate?.content?.parts || []) {
+          if (part.inlineData) {
+            this.imageData = "data:image/png;base64," + part.inlineData.data;
+          }
         }
       }
-    }
-    if (this.imageData) {
-      if (this.previewPanel) {
-        this.remove(this.previewPanel);
-        this.previewPanel.dispose();
-        this.previewPanel = null;
-      }
-      const panel = new xb.SpatialPanel();
-      panel.add(
-        new xb.ImageView({
-          src: this.imageData,
-        })
-      );
-      this.add(panel);
-      this.previewPanel = panel;
+      if (this.imageData) {
+        if (this.previewPanel) {
+          this.remove(this.previewPanel);
+          this.previewPanel.dispose();
+          this.previewPanel = null;
+        }
+        const panel = new xb.SpatialPanel();
+        panel.add(
+          new xb.ImageView({
+            src: this.imageData,
+          })
+        );
+        this.add(panel);
+        this.previewPanel = panel;
 
-      console.log("✅ 图片生成成功！");
-      console.log("💡 提示：你可以让 Gemini 启用画笔来修改设计");
-    } else {
-      console.error("Gemini did not return an image");
+        console.log("✅ 图片生成成功！");
+        console.log("💡 提示：你可以让 Gemini 启用画笔来修改设计");
+      } else {
+        console.error("Gemini did not return an image");
+      }
+    } catch (error) {
+      console.error("❌ 生成图片出错:", error);
+      throw error;
+    } finally {
+      this.endTask();
     }
   }
 
   async generateMesh() {
-    console.log("Generate mesh");
-    const taskId = await this.createMeshyTask(this.imageData);
-    console.log("taskId", taskId);
+    // 👇 开始任务前检查（这个任务最耗时）
+    this.startTask("生成 3D 模型");
+    
+    try {
+      console.log("🔨 开始生成 3D 模型...");
+      console.log("⏰ 这个过程可能需要 3-5 分钟，请耐心等待...");
+      
+      // 检查是否有图片数据
+      if (!this.imageData) {
+        throw new Error("没有图片数据。请先生成一张家具图片。");
+      }
+      
+      // 创建 Meshy 任务
+      console.log("📤 发送图片到 Meshy AI...");
+      const taskId = await this.createMeshyTask(this.imageData);
+      console.log("✅ Meshy 任务已创建，Task ID:", taskId);
 
-    // 轮询任务状态并获取模型 URL
-    const modelUrl = await this.pollTaskStatus(taskId);
+      // 轮询任务状态
+      console.log("⏳ 开始监控任务进度（这可能需要几分钟）...");
+      const modelUrl = await this.pollTaskStatus(taskId);
 
-    // 加载生成的 3D 模型
-    await this.loadGeneratedModel(modelUrl);
+      // 加载生成的 3D 模型
+      console.log("🎨 加载 3D 模型到场景中...");
+      await this.loadGeneratedModel(modelUrl);
+      
+      console.log("🎉 3D 模型生成完成！");
+      
+    } catch (error) {
+      console.error("❌ 生成 3D 模型失败:", error);
+      throw error;
+    } finally {
+      // 👇 无论成功失败都要解锁
+      this.endTask();
+    }
   }
 }
 
