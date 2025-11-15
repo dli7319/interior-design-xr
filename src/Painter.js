@@ -12,6 +12,7 @@ export class Painter extends xb.Script {
 
     for (let i = 0; i < this.user.controllers.length; ++i) {
       const painter = new TubePainter();
+      painter.mesh.material.color.set(0x000000);
       this.painters.push(painter);
       this.add(painter.mesh);
     }
