@@ -44,9 +44,6 @@ export class BoundingBoxCreator extends xb.Script {
 
   init() {
     xb.showReticleOnDepthMesh(true);
-
-    this.add(new THREE.DirectionalLight(0xffffff, 1.5).position.set(0, 2, 1));
-    this.add(new THREE.AmbientLight(0x404040));
   }
 
   // --- Interaction Handlers ---
@@ -170,6 +167,7 @@ export class BoundingBoxCreator extends xb.Script {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     geometry.translate(0, 0.5, 0);
 
+    this.clearMeshes();
     this.currentBoxMesh = new THREE.Mesh(geometry, this.boxMaterial.clone());
     this.currentBoxMesh.position.copy(this.startPoint);
     this.currentBoxMesh.quaternion.copy(this.boxRotation);
@@ -271,5 +269,15 @@ export class BoundingBoxCreator extends xb.Script {
 
     // 7. Apply new height to scale.
     this.currentBoxMesh.scale.y = newHeight;
+  }
+
+  clearMeshes() {
+    for (let i = this.children.length - 1; i >= 0; i--) {
+      const child = this.children[i];
+      if (child.isMesh) {
+        child.material.dispose();
+        this.remove(child);
+      }
+    }
   }
 }
