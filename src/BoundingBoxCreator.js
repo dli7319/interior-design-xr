@@ -13,6 +13,8 @@ const MIN_DIMENSION = 0.005;
  * A script for creating depth-aware 3D bounding boxes in two stages:
  * 1. Draw the base quad on a surface (Start Point -> Current Point defines W x L).
  * 2. Extrude the base vertically (Controller movement defines H).
+ *
+ * MODIFIED: Box is always parallel to the XZ plane (floor). Only Yaw rotation is applied.
  */
 export class BoundingBoxCreator extends xb.Script {
   constructor() {
@@ -134,38 +136,37 @@ export class BoundingBoxCreator extends xb.Script {
   startDrawingBase(intersection) {
     this.state = "DRAWING_BASE";
     this.startPoint.copy(intersection.point);
-    this.surfaceNormal.copy(intersection.normal || _v1.set(0, 1, 0));
 
-    // 1. Calculate the rotation to be flush with the surface AND face the camera (yaw).
-    const cameraYawForward = _v1
+    // --- CHANGED START ---
+    // Force the Box Up vector to be World Up (0, 1, 0), ignoring the surface normal.
+    // This ensures the box is always parallel to the XZ plane.
+    this.surfaceNormal.set(0, 1, 0);
+    const boxUp = this.surfaceNormal;
+
+    // 1. Calculate the rotation based on Camera Yaw only.
+    // Get Camera forward vector
+    const cameraForward = _v1
       .set(0, 0, -1)
       .applyQuaternion(xb.core.camera.quaternion);
-    const projectedForward = _v2
-      .copy(cameraYawForward)
-      .sub(
-        _v1
-          .copy(this.surfaceNormal)
-          .multiplyScalar(cameraYawForward.dot(this.surfaceNormal))
-      )
-      .normalize();
 
-    if (projectedForward.lengthSq() < 1e-6) {
-      projectedForward
-        .copy(_v1.set(0, 0, -1))
-        .sub(
-          _v2
-            .copy(this.surfaceNormal)
-            .multiplyScalar(_v1.dot(this.surfaceNormal))
-        )
-        .normalize();
+    // Flatten the camera vector onto the XZ plane (set y to 0)
+    cameraForward.y = 0;
+    cameraForward.normalize();
+
+    // Handle edge case: looking straight down or up
+    if (cameraForward.lengthSq() < 1e-6) {
+      cameraForward.set(0, 0, -1);
     }
 
-    const boxUp = this.surfaceNormal;
-    const boxRight = _v1.crossVectors(boxUp, projectedForward).normalize();
-    const boxForward = _v2.crossVectors(boxRight, boxUp).normalize();
+    // Calculate orthogonal basis vectors
+    // _v2 becomes boxRight
+    const boxRight = _v2.crossVectors(boxUp, cameraForward).normalize();
+    // Recalculate boxForward (_v1) to ensure perfect orthogonality
+    const boxForward = _v1.crossVectors(boxRight, boxUp).normalize();
 
     _m1.makeBasis(boxRight, boxUp, boxForward);
     this.boxRotation.setFromRotationMatrix(_m1);
+    // --- CHANGED END ---
 
     // 2. Create Mesh: Geometry pivot is at the center of the base (0, 0, 0)
     const geometry = new THREE.BoxGeometry(1, 1, 1);
