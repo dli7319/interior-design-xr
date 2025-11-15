@@ -690,6 +690,7 @@ class InteriorDesignApp extends xb.Script {
       this.remove(this.blackPainter);
       this.blackPainter.dispose();
     }
+    this.blackPainter = null;
     xb.core.input.controllers.forEach((element) => {
       element.traverse((child) => {
         if (child.name == "pivot") {
@@ -698,7 +699,7 @@ class InteriorDesignApp extends xb.Script {
         }
       });
     });
-    this.blackPainter = null;
+    xb.core.input.pivotsEnabled = false;
   }
 }
 
