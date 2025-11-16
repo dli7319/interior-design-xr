@@ -31,9 +31,9 @@ class InteriorDesignApp extends xb.Script {
     this.boundingBoxCreator = new BoundingBoxCreator();
     this.add(this.boundingBoxCreator);
 
-    // 👇 添加任务状态管理
-    this.isProcessing = false; // 是否有任务正在执行
-    this.currentTask = null; // 当前任务名称
+    // Add task status management
+    this.isProcessing = false; // Whether a task is currently executing
+    this.currentTask = null; // Current task name
 
     this.setupGeminiLive();
     // this.testImageToBase64();
@@ -53,31 +53,31 @@ class InteriorDesignApp extends xb.Script {
   }
 
   /**
-   * 检查是否可以执行新任务
+   * Check if a new task can be started
    */
   canStartTask() {
     return !this.isProcessing;
   }
 
   /**
-   * 开始任务（加锁）
+   * Start a task (lock)
    */
   startTask(taskName) {
     if (this.isProcessing) {
       throw new Error(
-        `无法启动新任务 "${taskName}"。当前正在执行: ${this.currentTask}。请等待完成后再试。`
+        `Cannot start new task "${taskName}". Currently executing: ${this.currentTask}. Please wait for completion.`
       );
     }
     this.isProcessing = true;
     this.currentTask = taskName;
-    console.log(`🔒 任务已锁定: ${taskName}`);
+    console.log(`Task locked: ${taskName}`);
   }
 
   /**
-   * 结束任务（解锁）
+   * End a task (unlock)
    */
   endTask() {
-    console.log(`🔓 任务已完成: ${this.currentTask}`);
+    console.log(`Task completed: ${this.currentTask}`);
     this.isProcessing = false;
     this.currentTask = null;
   }
@@ -142,26 +142,26 @@ class InteriorDesignApp extends xb.Script {
 
   async testImageToBase64() {
     try {
-      console.log("1. 开始加载图片:", GEMINI_BOOKSHELF_IMAGE);
+      console.log("1. Starting to load image:", GEMINI_BOOKSHELF_IMAGE);
 
-      // 加载图片
+      // Load image
       const response = await fetch(GEMINI_BOOKSHELF_IMAGE);
-      console.log("2. Fetch 响应状态:", response.status, response.statusText);
+      console.log("2. Fetch response status:", response.status, response.statusText);
 
       if (!response.ok) {
         throw new Error(
-          `加载图片失败: ${response.status} - ${response.statusText}`
+          `Failed to load image: ${response.status} - ${response.statusText}`
         );
       }
 
-      // 转换成 blob
+      // Convert to blob
       const blob = await response.blob();
-      console.log("3. 图片 Blob 信息:");
-      console.log("   - 大小:", blob.size, "字节");
-      console.log("   - 类型:", blob.type);
+      console.log("3. Image Blob info:");
+      console.log("   - Size:", blob.size, "bytes");
+      console.log("   - Type:", blob.type);
 
-      // 转换成 base64
-      console.log("4. 开始转换成 base64...");
+      // Convert to base64
+      console.log("4. Starting base64 conversion...");
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
@@ -169,30 +169,30 @@ class InteriorDesignApp extends xb.Script {
         reader.readAsDataURL(blob);
       });
 
-      console.log("5. ✅ Base64 转换成功！");
-      console.log("   - 总长度:", base64.length, "字符");
-      console.log("   - 前100个字符:", base64.substring(0, 100) + "...");
-      console.log("\n完整的 Base64 字符串:");
+      console.log("5. Base64 conversion successful!");
+      console.log("   - Total length:", base64.length, "characters");
+      console.log("   - First 100 characters:", base64.substring(0, 100) + "...");
+      console.log("\nComplete Base64 string:");
       console.log(base64);
       const taskId = await this.createMeshyTask(base64);
       console.log("taskId", taskId);
 
-      // 轮询任务状态并获取模型 URL
+      // Poll task status and get model URL
       const modelUrl = await this.pollTaskStatus(taskId);
 
-      // 加载生成的 3D 模型
+      // Load the generated 3D model
       await this.loadGeneratedModel(modelUrl);
     } catch (error) {
-      console.error("❌ 错误:", error);
-      console.error("错误详情:", error.message);
+      console.error("Error:", error);
+      console.error("Error details:", error.message);
     }
   }
 
   /**
-   * 调用 Meshy API - 基于官方文档
+   * Call Meshy API - based on official documentation
    */
   async createMeshyTask(base64Image) {
-    console.log("\n🚀 开始调用 Meshy API...");
+    console.log("\nStarting Meshy API call...");
 
     try {
       const headers = {
@@ -202,12 +202,12 @@ class InteriorDesignApp extends xb.Script {
 
       const payload = {
         image_url: base64Image, // base64 data URI
-        enable_pbr: true,
-        should_remesh: true,
+        enable_pbr: false,
+        should_remesh: false,
         should_texture: true,
       };
 
-      console.log("📤 发送请求...");
+      console.log("Sending request...");
 
       const response = await fetch(
         "https://api.meshy.ai/openapi/v1/image-to-3d",
@@ -220,27 +220,27 @@ class InteriorDesignApp extends xb.Script {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`API 错误: ${response.status} - ${errorText}`);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log("📦 API 响应:", data);
+      console.log("API response:", data);
 
       const taskId = data.result;
-      console.log("✅ Task 创建成功！Task ID:", taskId);
+      console.log("Task created successfully! Task ID:", taskId);
 
       return taskId;
     } catch (error) {
-      console.error("❌ Meshy API 错误:", error);
+      console.error("Meshy API error:", error);
       throw error;
     }
   }
 
   /**
-   * 轮询任务状态 - 基于官方文档和Python代码
+   * Poll task status - based on official documentation and Python code
    */
   async pollTaskStatus(taskId, progressCallback) {
-    console.log("\n⏳ 开始轮询任务状态...");
+    console.log("\nStarting task status polling...");
 
     const headers = {
       Authorization: `Bearer ${MESHY_API_KEY}`,
@@ -258,7 +258,7 @@ class InteriorDesignApp extends xb.Script {
         );
 
         if (!response.ok) {
-          throw new Error(`轮询失败: ${response.status}`);
+          throw new Error(`Polling failed: ${response.status}`);
         }
 
         // Python: task = response.json()
@@ -266,13 +266,13 @@ class InteriorDesignApp extends xb.Script {
 
         // Python: if task["status"] == "SUCCEEDED"
         if (task.status === "SUCCEEDED") {
-          console.log("✅ Task 完成！");
+          console.log("Task completed!");
           break;
         }
 
         // Python: print("task status:", task["status"], ...)
         console.log(
-          `📊 Task 状态: ${task.status} | 进度: ${task.progress}% | 5秒后重试...`
+          `Task status: ${task.status} | Progress: ${task.progress}% | Retrying in 5 seconds...`
         );
 
         if (progressCallback) {
@@ -282,23 +282,23 @@ class InteriorDesignApp extends xb.Script {
         // Python: time.sleep(5)
         await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
-        console.error("❌ 轮询错误:", error);
+        console.error("Polling error:", error);
         throw error;
       }
     }
 
     // Python: model_url = task["model_urls"]["glb"]
     const modelUrl = task.model_urls.glb;
-    console.log("🔗 模型 URL:", modelUrl);
+    console.log("Model URL:", modelUrl);
 
     return modelUrl;
   }
 
   /**
-   * 加载生成的 3D 模型
+   * Load the generated 3D model
    */
   async loadGeneratedModel(modelUrl) {
-    console.log("\n🎨 开始加载生成的 3D 模型...");
+    console.log("\nStarting to load generated 3D model...");
 
     // Get the user-drawn bounding box
     const boundingBox = this.boundingBoxCreator.children[0];
@@ -321,7 +321,7 @@ class InteriorDesignApp extends xb.Script {
 
     this.add(modelviewer);
 
-    // 👇 ALIGNMENT LOGIC START
+    // ALIGNMENT LOGIC START
     if (boundingBox) {
       // 1. Match Position and Rotation
       // BoundingBoxCreator uses a pivot at the bottom-center of the box,
@@ -357,9 +357,9 @@ class InteriorDesignApp extends xb.Script {
         this.previewPanel = null;
       }
     }
-    // 👆 ALIGNMENT LOGIC END
+    // ALIGNMENT LOGIC END
 
-    console.log("🎉 模型已添加到场景中！");
+    console.log("Model added to scene!");
   }
 
   async loadTestMesh() {
@@ -380,47 +380,47 @@ class InteriorDesignApp extends xb.Script {
   }
 
   /**
-   * 拍截图并重新生成图片（通过 Tool 调用）
+   * Capture screenshot and regenerate image (called via Tool)
    */
   async captureAndRegenerateImage() {
-    this.startTask("重新生成图片");
+    this.startTask("Regenerate image");
     try {
-      console.log("\n📸 开始拍截图...");
+      console.log("\nStarting screenshot capture...");
 
-      // 检查是否有当前图片
+      // Check if there is a current image
       if (!this.imageData) {
-        throw new Error("没有当前图片。请先生成一张家具图片。");
+        throw new Error("No current image. Please generate a furniture image first.");
       }
 
-      // 检查是否启用了画笔
+      // Check if painter is enabled
       if (!this.blackPainter) {
-        console.warn("⚠️ 画笔未启用，将直接拍摄当前场景");
+        console.warn("Painter not enabled, will capture current scene directly");
       }
 
-      // 使用 xrblocks 的截图功能
+      // Use xrblocks screenshot functionality
       const screenshotBase64 =
         await xb.core.screenshotSynthesizer.getScreenshot();
-      console.log("✅ 截图完成！");
-      console.log("截图数据长度:", screenshotBase64.length);
+      console.log("Screenshot completed!");
+      console.log("Screenshot data length:", screenshotBase64.length);
 
-      // 发送到 Gemini 重新生成图片
+      // Send to Gemini to regenerate image
       await this.regenerateImageWithSketch(screenshotBase64);
     } catch (error) {
-      console.error("❌ 拍截图出错:", error);
-      throw error; // 向 Tool 抛出错误，让 Gemini 知道
+      console.error("Screenshot error:", error);
+      throw error; // Throw error to Tool so Gemini knows
     } finally {
       this.endTask();
     }
   }
 
   /**
-   * 把截图发送给 Gemini，生成新图片
+   * Send screenshot to Gemini to generate new image
    */
   async regenerateImageWithSketch(screenshotBase64) {
-    console.log("\n🤖 发送截图给 Gemini...");
+    console.log("\nSending screenshot to Gemini...");
 
     if (!xb.core.ai.isAvailable()) {
-      console.error("❌ AI 不可用");
+      console.error("AI not available");
       return;
     }
 
@@ -429,7 +429,7 @@ class InteriorDesignApp extends xb.Script {
     try {
       const ai = xb.core.ai.model.ai;
 
-      // 准备图片数据（去掉 data:image/png;base64, 前缀）
+      // Prepare image data (remove data:image/png;base64, prefix)
       const base64Data = screenshotBase64.split(",")[1];
 
       const prompt = `
@@ -444,9 +444,9 @@ class InteriorDesignApp extends xb.Script {
         - Output should be a clean product image with white or transparent background
         - Maintain the approximate size and proportions of the original furniture
               `.trim();
-      console.log("📝 Prompt:", prompt);
+      console.log("Prompt:", prompt);
 
-      // 发送图片和文字给 Gemini
+      // Send image and text to Gemini
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents: [
@@ -463,24 +463,24 @@ class InteriorDesignApp extends xb.Script {
           },
         ],
       });
-      console.log("📦 Gemini 响应:", response);
+      console.log("Gemini response:", response);
 
-      // 提取生成的新图片
+      // Extract the generated new image
       if (response.candidates && response.candidates.length > 0) {
         const firstCandidate = response.candidates[0];
         for (const part of firstCandidate?.content?.parts || []) {
           if (part.inlineData) {
             const newImageData =
               "data:image/png;base64," + part.inlineData.data;
-            console.log("✅ Gemini 生成了新图片！");
+            console.log("Gemini generated new image!");
 
-            // 👇 清除画笔的内容
+            // Clear painter strokes
             this.clearPainterStrokes();
 
-            // 更新显示
+            // Update display
             this.updateImagePreview(newImageData);
 
-            // 更新当前图片数据，以便后续生成 3D 模型
+            // Update current image data for subsequent 3D model generation
             this.imageData = newImageData;
 
             return;
@@ -488,27 +488,27 @@ class InteriorDesignApp extends xb.Script {
         }
       }
 
-      console.error("❌ Gemini 没有返回图片");
+      console.error("Gemini did not return an image");
     } catch (error) {
-      console.error("❌ 发送给 Gemini 出错:", error);
+      console.error("Error sending to Gemini:", error);
     }
   }
 
   /**
-   * 清除画笔的所有线条
+   * Clear all painter strokes
    */
   clearPainterStrokes() {
     if (this.blackPainter) {
-      console.log("🧹 清除画笔线条...");
+      console.log("Clearing painter strokes...");
 
-      // 移除画笔对象
+      // Remove painter object
       this.remove(this.blackPainter);
 
-      // 如果需要清理资源
+      // Clean up resources if needed
       if (this.blackPainter.painters) {
         for (const painter of this.blackPainter.painters) {
           if (painter.mesh) {
-            // 清理几何体和材质
+            // Clean up geometry and material
             if (painter.mesh.geometry) {
               painter.mesh.geometry.dispose();
             }
@@ -519,27 +519,27 @@ class InteriorDesignApp extends xb.Script {
         }
       }
 
-      // 重置引用
+      // Reset reference
       this.disableDrawingTool();
 
-      console.log("✅ 画笔线条已清除！");
+      console.log("Painter strokes cleared!");
     }
   }
 
   /**
-   * 更新图片预览
+   * Update image preview
    */
   updateImagePreview(newImageData) {
-    console.log("🖼️ 更新图片预览...");
+    console.log("Updating image preview...");
 
-    // 移除旧的预览
+    // Remove old preview
     if (this.previewPanel) {
       this.remove(this.previewPanel);
       this.previewPanel.dispose();
       this.previewPanel = null;
     }
 
-    // 创建新的预览
+    // Create new preview
     const panel = new xb.SpatialPanel();
     const camera = xb.core.camera;
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
@@ -568,33 +568,33 @@ class InteriorDesignApp extends xb.Script {
     this.add(panel);
     this.previewPanel = panel;
 
-    console.log("✅ 图片预览已更新！");
+    console.log("Image preview updated!");
   }
 
   /**
-   * 启用绘画工具（通过 Gemini Tool 调用）
+   * Enable drawing tool (called via Gemini Tool)
    */
   enableDrawing() {
-    console.log("🎨 启用绘画工具...");
+    console.log("Enabling drawing tool...");
 
     if (this.blackPainter) {
-      console.log("⚠️ 画笔已经启用");
+      console.log("Painter already enabled");
       return;
     }
 
-    // 启用画笔
+    // Enable painter
     this.blackPainter = new Painter();
     this.add(this.blackPainter);
     if (this.previewPanel) {
       // Prevent dragging the panel while drawing.
       this.previewPanel.draggable = false;
     }
-    console.log("✅ 画笔已启用！用手柄的 trigger 按钮画画");
+    console.log("Painter enabled! Use controller trigger button to draw");
   }
 
   async generateImage(furniture = "bookshelf") {
-    // 👇 开始任务前检查
-    this.startTask("生成图片");
+    // Check before starting task
+    this.startTask("Generate image");
 
     try {
       console.log("Generate Image");
@@ -632,13 +632,13 @@ class InteriorDesignApp extends xb.Script {
       if (this.imageData) {
         this.updateImagePreview(this.imageData);
 
-        console.log("✅ 图片生成成功！");
-        console.log("💡 提示：你可以让 Gemini 启用画笔来修改设计");
+        console.log("Image generation successful!");
+        console.log("Tip: You can ask Gemini to enable the painter to modify the design");
       } else {
         console.error("Gemini did not return an image");
       }
     } catch (error) {
-      console.error("❌ 生成图片出错:", error);
+      console.error("Image generation error:", error);
       throw error;
     } finally {
       this.endTask();
@@ -646,41 +646,41 @@ class InteriorDesignApp extends xb.Script {
   }
 
   async generateMesh() {
-    // 👇 开始任务前检查（这个任务最耗时）
-    this.startTask("生成 3D 模型");
+    // Check before starting task (this is the most time-consuming task)
+    this.startTask("Generate 3D model");
 
     try {
-      console.log("🔨 开始生成 3D 模型...");
-      console.log("⏰ 这个过程可能需要 3-5 分钟，请耐心等待...");
+      console.log("Starting 3D model generation...");
+      console.log("This process may take 3-5 minutes, please be patient...");
 
-      // 检查是否有图片数据
+      // Check if image data exists
       if (!this.imageData) {
-        throw new Error("没有图片数据。请先生成一张家具图片。");
+        throw new Error("No image data. Please generate a furniture image first.");
       }
 
-      // 创建 Meshy 任务
-      console.log("📤 发送图片到 Meshy AI...");
+      // Create Meshy task
+      console.log("Sending image to Meshy AI...");
       const taskId = await this.createMeshyTask(this.imageData);
-      console.log("✅ Meshy 任务已创建，Task ID:", taskId);
+      console.log("Meshy task created, Task ID:", taskId);
 
-      // 轮询任务状态
-      console.log("⏳ 开始监控任务进度（这可能需要几分钟）...");
+      // Poll task status
+      console.log("Monitoring task progress (this may take a few minutes)...");
       const modelUrl = await this.pollTaskStatus(taskId, (progress) => {
         if (this.previewPanel) {
           this.previewPanel.setMeshProgress(progress);
         }
       });
 
-      // 加载生成的 3D 模型
-      console.log("🎨 加载 3D 模型到场景中...");
+      // Load the generated 3D model
+      console.log("Loading 3D model into scene...");
       await this.loadGeneratedModel(modelUrl);
 
-      console.log("🎉 3D 模型生成完成！");
+      console.log("3D model generation complete!");
     } catch (error) {
-      console.error("❌ 生成 3D 模型失败:", error);
+      console.error("3D model generation failed:", error);
       throw error;
     } finally {
-      // 👇 无论成功失败都要解锁
+      // Unlock regardless of success or failure
       this.endTask();
     }
   }
