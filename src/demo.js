@@ -335,6 +335,7 @@ class InteriorDesignApp extends xb.Script {
       // and ModelViewer (by default) aligns the model's bottom-center to (0,0,0).
       // Therefore, we can simply copy the transforms.
       modelviewer.position.copy(boundingBox.position);
+      modelviewer.position.y += 0.05; // Move the mesh slightly up.
       modelviewer.quaternion.copy(boundingBox.quaternion);
 
       // 2. Match Scale
